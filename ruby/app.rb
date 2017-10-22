@@ -44,6 +44,7 @@ class App < Sinatra::Base
     set :session_secret, 'tonymoris'
     set :public_folder, File.expand_path('../../public', __FILE__)
     set :avatar_max_size, 1 * 1024 * 1024
+    set :environment, :production
 
     enable :sessions
   end
