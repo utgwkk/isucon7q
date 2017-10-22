@@ -3,6 +3,7 @@ require 'mysql2'
 require 'sinatra/base'
 require 'fileutils'
 require 'securerandom'
+require 'rack-lineprof'
 
 require 'net/http'
 require 'uri'
@@ -32,6 +33,8 @@ def init_servers
 end
 
 class App < Sinatra::Base
+  use Rack::Lineprof, profile: 'app.rb'
+
   configure do
     set :session_secret, 'tonymoris'
     set :public_folder, File.expand_path('../../public', __FILE__)
@@ -208,7 +211,7 @@ class App < Sinatra::Base
       (
         SELECT
           id,
-          IFNULL(h.message_id, (SELECT MIN(id) FROM message)) AS message_id
+          IFNULL(h.message_id, 0) AS message_id
         FROM
           channel ch
         LEFT JOIN haveread h
