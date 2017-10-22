@@ -15,7 +15,7 @@ def icon_init
 end
 
 def icon_put filename, data
-  File.binwrite(ICON_DIR + filename, data)
+  File.binwrite(ICON_DIR + "/" + filename, data)
 end
 
 IPS = ["163.43.31.42", "27.133.130.146"]
