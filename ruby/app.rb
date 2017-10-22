@@ -1,6 +1,34 @@
 require 'digest/sha1'
 require 'mysql2'
 require 'sinatra/base'
+require 'fileutils'
+
+require 'net/http'
+require 'uri'
+
+ICON_DIR = "/home/isucon/isubata/webapp/public/icons"
+ICON_INITDIR = "/home/isucon/isubata/webapp/public/icons-init"
+
+def icon_init
+  FileUtils.rm_r ICON_DIR
+  FileUtils.cp_r ICON_INITDIR, ICON_DIR, remove_destination: true
+end
+
+def icon_put filename, data
+  File.binwrite(ICON_DIR + filename, data)
+end
+
+IPS = ["163.43.31.42", "27.133.130.146"]
+HOST = `hostname`.strip
+puts "Hello from #{HOST}"
+
+def init_servers
+  IPS.each do |ip|
+    uri = URI.parse("http://#{ip}/icon_initialize")
+    res = Net::HTTP.get_response(uri)
+    $stderr.puts "Failed Init in #{ip} at #{res.code}" unless res.code == "204"
+  end
+end
 
 class App < Sinatra::Base
   configure do
@@ -33,12 +61,20 @@ class App < Sinatra::Base
     end
   end
 
+  get '/icon_initialize' do
+    puts "Initialize Icon in #{HOST}"
+    icon_init
+    204
+  end
+
   get '/initialize' do
     db.query("DELETE FROM user WHERE id > 1000")
     db.query("DELETE FROM image WHERE id > 1001")
     db.query("DELETE FROM channel WHERE id > 10")
     db.query("DELETE FROM message WHERE id > 10000")
     db.query("DELETE FROM haveread")
+      
+    init_servers
     204
   end
 
@@ -303,9 +339,11 @@ class App < Sinatra::Base
     end
 
     if !avatar_name.nil? && !avatar_data.nil?
-      statement = db.prepare('INSERT INTO image (name, data) VALUES (?, ?)')
-      statement.execute(avatar_name, avatar_data)
-      statement.close
+      # statement = db.prepare('INSERT INTO image (name, data) VALUES (?, ?)')
+      # statement.execute(avatar_name, avatar_data)
+      #statement.close
+      icon_put avatar_name, avatar_data
+
       statement = db.prepare('UPDATE user SET avatar_icon = ? WHERE id = ?')
       statement.execute(avatar_name, user['id'])
       statement.close
@@ -320,19 +358,19 @@ class App < Sinatra::Base
     redirect '/', 303
   end
 
-  get '/icons/:file_name' do
-    file_name = params[:file_name]
-    statement = db.prepare('SELECT * FROM image WHERE name = ?')
-    row = statement.execute(file_name).first
-    statement.close
-    ext = file_name.include?('.') ? File.extname(file_name) : ''
-    mime = ext2mime(ext)
-    if !row.nil? && !mime.empty?
-      content_type mime
-      return row['data']
-    end
-    404
-  end
+#  get '/icons/:file_name' do
+#    file_name = params[:file_name]
+#    statement = db.prepare('SELECT * FROM image WHERE name = ?')
+#    row = statement.execute(file_name).first
+#    statement.close
+#    ext = file_name.include?('.') ? File.extname(file_name) : ''
+#    mime = ext2mime(ext)
+#    if !row.nil? && !mime.empty?
+#      content_type mime
+#      return row['data']
+#    end
+#    404
+#  end
 
   private
 
