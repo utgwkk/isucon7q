@@ -4,6 +4,7 @@ require 'sinatra/base'
 require 'fileutils'
 require 'securerandom'
 require 'rack-lineprof'
+require 'zlib'
 
 require 'net/http'
 require 'uri'
@@ -17,7 +18,10 @@ def icon_init
 end
 
 def icon_put filename, data
-  File.binwrite(ICON_DIR + "/" + filename, data)
+  f = File.open(ICON_DIR + "/" + filename + ".gz", 'wb')
+  gz = Zlib::GzipWriter.new(f)
+  gz.write data
+  gz.close
 end
 
 IPS = ["192.168.101.1", "192.168.101.2"]
