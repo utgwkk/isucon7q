@@ -10,7 +10,7 @@ ICON_DIR = "/home/isucon/isubata/webapp/public/icons"
 ICON_INITDIR = "/home/isucon/isubata/webapp/public/icons-init"
 
 def icon_init
-  FileUtils.rm_r ICON_DIR
+  FileUtils.rm_r ICON_DIR if Dir.exist?(ICON_DIR)
   FileUtils.cp_r ICON_INITDIR, ICON_DIR, remove_destination: true
 end
 
