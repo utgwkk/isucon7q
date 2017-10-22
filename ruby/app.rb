@@ -22,6 +22,7 @@ def icon_put filename, data
   gz = Zlib::GzipWriter.new(f)
   gz.write data
   gz.close
+  f.close
 end
 
 IPS = ["192.168.101.1", "192.168.101.2"]
