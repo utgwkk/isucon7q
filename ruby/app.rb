@@ -204,6 +204,8 @@ class App < Sinatra::Base
       return 403
     end
 
+    sleep 0.5
+
     res = db.prepare(%|
     SELECT
       id AS channel_id,
