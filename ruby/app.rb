@@ -19,7 +19,7 @@ def icon_put filename, data
   File.binwrite(ICON_DIR + "/" + filename, data)
 end
 
-IPS = ["163.43.31.42", "27.133.130.146"]
+IPS = ["192.168.101.1", "192.168.101.2"]
 HOST = `hostname`.strip
 puts "Hello from #{HOST}"
 
@@ -122,7 +122,7 @@ class App < Sinatra::Base
 
   post '/login' do
     name = params[:name]
-    statement = db.prepare('SELECT * FROM user WHERE name = ?')
+    statement = db.prepare('SELECT id, password, salt FROM user WHERE name = ?')
     row = statement.execute(name).first
     if row.nil? || row['password'] != Digest::SHA1.hexdigest(row['salt'] + params[:password])
       return 403
@@ -155,18 +155,26 @@ class App < Sinatra::Base
 
     channel_id = params[:channel_id].to_i
     last_message_id = params[:last_message_id].to_i
-    statement = db.prepare('SELECT * FROM message WHERE id > ? AND channel_id = ? ORDER BY id DESC LIMIT 100')
+    statement = db.prepare(%|
+      SELECT m.id, m.created_at, m.content, u.name, u.display_name, u.avatar_icon
+      FROM message m
+      INNER JOIN user u
+      ON u.id = m.user_id
+      WHERE m.id > ? AND m.channel_id = ?
+      ORDER BY m.id DESC LIMIT 100
+    |)
     rows = statement.execute(last_message_id, channel_id).to_a
-    response = []
-    rows.each do |row|
+    response = rows.map do |row|
       r = {}
       r['id'] = row['id']
-      statement = db.prepare('SELECT name, display_name, avatar_icon FROM user WHERE id = ?')
-      r['user'] = statement.execute(row['user_id']).first
+      r['user'] = {
+        'name' => row['name'],
+        'display_name' => row['display_name'],
+        'avatar_icon' => row['avatar_icon'],
+      }
       r['date'] = row['created_at'].strftime("%Y/%m/%d %H:%M:%S")
       r['content'] = row['content']
-      response << r
-      statement.close
+      r
     end
     response.reverse!
 
@@ -232,19 +240,27 @@ class App < Sinatra::Base
     @page = @page.to_i
 
     n = 20
-    statement = db.prepare('SELECT * FROM message WHERE channel_id = ? ORDER BY id DESC LIMIT ? OFFSET ?')
+    statement = db.prepare(%|
+      SELECT m.id, m.created_at, m.content, u.name, u.display_name, u.avatar_icon
+      FROM message m
+      INNER JOIN user u
+      ON u.id = m.user_id
+      WHERE m.channel_id = ?
+      ORDER BY m.id DESC LIMIT ? OFFSET ?
+    |)
     rows = statement.execute(@channel_id, n, (@page - 1) * n).to_a
     statement.close
-    @messages = []
-    rows.each do |row|
+    @messages = rows.map do |row|
       r = {}
       r['id'] = row['id']
-      statement = db.prepare('SELECT name, display_name, avatar_icon FROM user WHERE id = ?')
-      r['user'] = statement.execute(row['user_id']).first
+      r['user'] = {
+        'name' => row['name'],
+        'display_name' => row['display_name'],
+        'avatar_icon' => row['avatar_icon'],
+      }
       r['date'] = row['created_at'].strftime("%Y/%m/%d %H:%M:%S")
       r['content'] = row['content']
-      @messages << r
-      statement.close
+      r
     end
     @messages.reverse!
 
