@@ -3,7 +3,6 @@ require 'mysql2'
 require 'sinatra/base'
 require 'fileutils'
 require 'securerandom'
-require 'rack-lineprof'
 require 'zlib'
 
 require 'net/http'
@@ -38,8 +37,6 @@ def init_servers
 end
 
 class App < Sinatra::Base
-  use Rack::Lineprof, profile: 'app.rb'
-
   configure do
     set :session_secret, 'tonymoris'
     set :public_folder, File.expand_path('../../public', __FILE__)
@@ -423,7 +420,7 @@ class App < Sinatra::Base
   end
 
   def db_get_user(user_id)
-    statement = db.prepare('SELECT * FROM user WHERE id = ?')
+    statement = db.prepare('SELECT id, name, display_name, avatar_icon FROM user WHERE id = ?')
     user = statement.execute(user_id).first
     statement.close
     user
